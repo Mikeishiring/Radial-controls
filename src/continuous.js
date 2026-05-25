@@ -263,9 +263,11 @@ function stageProgress() {
 
 function rootPoint() {
   const { w, h } = state.size;
+  const minY = Math.min(300, h * 0.48);
+  const maxY = Math.max(minY, h - 118);
   return {
     x: clamp(w * 0.18, 98, w - 118),
-    y: clamp(h * 0.68, 300, h - 118),
+    y: clamp(h * 0.68, minY, maxY),
   };
 }
 
@@ -775,7 +777,10 @@ function renderShapePreview() {
     <section class="shape-preview" aria-label="Generated profile shape">
       <div class="shape-preview-head">
         <p class="question-label mono">generated shape</p>
-        <span class="shape-read mono">${escapeHtml(stats.read)}</span>
+        <div class="shape-preview-actions">
+          <span class="shape-read mono">${escapeHtml(stats.read)}</span>
+          <button class="mini-reset mono" data-reset type="button">reset</button>
+        </div>
       </div>
       <svg class="shape-preview-svg" viewBox="0 0 260 260" role="img" aria-label="Generated onboarding mark preview">
         <circle class="mini-orbit" cx="130" cy="130" r="102" />
@@ -917,7 +922,9 @@ function render() {
   app.querySelectorAll("[data-option]").forEach((button) => {
     button.addEventListener("click", () => selectByClick(button.dataset.option));
   });
-  app.querySelector("[data-reset]").addEventListener("click", resetShape);
+  app.querySelectorAll("[data-reset]").forEach((button) => {
+    button.addEventListener("click", resetShape);
+  });
   app.querySelector("[data-copy]").addEventListener("click", copyMarkdown);
   app.querySelectorAll("[data-field]").forEach((input) => {
     input.addEventListener("input", () => {
