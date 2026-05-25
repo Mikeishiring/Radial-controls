@@ -335,7 +335,7 @@ function snapshot() {
     updated_at: today,
     person: slugify(state.personId),
     visibility: state.visibility,
-    source: "radial-controls-design-demo",
+    source: "onboarding-v1-radial-controls",
     completion: completion(),
     mode_color: { ...state.values.mode },
     contribution_shape: { ...state.values.craft },
@@ -388,8 +388,8 @@ function render() {
       <div class="brand">
         <div class="brand-mark" aria-hidden="true"></div>
         <div>
-          <div class="brand-kicker">Radial Controls</div>
-          <h1 class="brand-title">Pull a control grammar into shape.</h1>
+          <div class="brand-kicker">Onboarding V1</div>
+          <h1 class="brand-title">Pull radial controls into shape.</h1>
         </div>
       </div>
       <div class="top-actions demo-controls">
@@ -873,7 +873,7 @@ async function copyText(text, message) {
 
 function buildMarkdown(snap) {
   return `---
-record_id: ${snap.person}-${today}-radial-controls
+record_id: ${snap.person}-${today}-onboarding-v1
 record_type: preference_snapshot
 person: ${snap.person}
 schema_version: ${snap.schema_version}
@@ -894,7 +894,7 @@ semantic_mark:
   line: ${yamlScalar(snap.semantic_mark.line)}
 ---
 
-# ${snap.person} radial controls semantic mark
+# ${snap.person} onboarding v1 semantic mark
 
 ${snap.routing_sentence}
 `;

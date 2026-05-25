@@ -105,7 +105,7 @@ async function main() {
           title: document.title,
           heading: document.querySelector(".brand-title")?.textContent,
           mark: document.querySelector(".reveal-head h2")?.textContent,
-          hasJson: Boolean(document.querySelector(".json-preview")?.textContent.includes("radial-controls-design-demo")),
+          hasJson: Boolean(document.querySelector(".json-preview")?.textContent.includes("onboarding-v1-radial-controls")),
           scrollWidth: document.documentElement.scrollWidth,
           clientWidth: document.documentElement.clientWidth
         };
@@ -117,7 +117,7 @@ async function main() {
     }
 
     const value = result.result.value;
-    if (!value.title.includes("Radial Controls") || !value.hasJson || value.scrollWidth > value.clientWidth + 1) {
+    if (!value.title.includes("Onboarding V1") || !value.hasJson || value.scrollWidth > value.clientWidth + 1) {
       throw new Error(JSON.stringify(value, null, 2));
     }
 

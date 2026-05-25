@@ -2,11 +2,11 @@
   "name": "radial-controls",
   "version": "0.1.0",
   "private": true,
-  "description": "Standalone design prototype for weighted radial controls and semantic mark composition.",
+  "description": "Onboarding V1 prototype built around weighted radial controls and semantic mark composition.",
   "scripts": {
     "build": "node scripts/build-public.js",
     "start": "node server.js",
     "verify": "node scripts/verify-cdp.js",
-    "deploy": "npm run build && npx wrangler pages deploy dist --project-name radial-controls --branch main --commit-hash local-demo --commit-message \"Public Radial Controls design demo\" --commit-dirty=true"
+    "deploy": "npm run build && npx wrangler pages deploy dist --project-name radial-controls --branch main --commit-hash local-demo --commit-message \"Public Onboarding V1 radial-controls demo\" --commit-dirty=true"
   }
 }
