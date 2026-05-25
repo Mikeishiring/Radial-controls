@@ -174,7 +174,7 @@ function fanRadius() {
 }
 
 function bubbleRadius() {
-  return state.size.w < 620 ? 41 : 52;
+  return state.size.w < 620 ? 34 : 52;
 }
 
 function mainAngle() {
@@ -197,12 +197,12 @@ function optionPositions() {
   if (state.size.w < 620 && count === 6) {
     const scale = clamp(state.size.h / 760, 0.88, 1.05);
     const offsets = [
-      [-28, -146],
-      [54, -134],
-      [120, -78],
-      [132, 2],
-      [96, 80],
-      [46, 140],
+      [-30, -136],
+      [52, -124],
+      [122, -80],
+      [150, -8],
+      [128, 70],
+      [72, 138],
     ];
     return stage.options.map(([key, label, signal], index) => ({
       key,
@@ -429,6 +429,60 @@ function shapePath() {
   return `${polylinePath(state.trail)} Z`;
 }
 
+function normalizedShapePoints(size = 260, pad = 28) {
+  const source = state.trail.length > 1
+    ? state.trail
+    : [
+      { x: 0, y: 54 },
+      { x: 86, y: 16 },
+      { x: 172, y: 52 },
+      { x: 214, y: 128 },
+      { x: 142, y: 210 },
+      { x: 42, y: 184 },
+    ];
+  const xs = source.map((point) => point.x);
+  const ys = source.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const width = Math.max(1, maxX - minX);
+  const height = Math.max(1, maxY - minY);
+  const scale = Math.min((size - pad * 2) / width, (size - pad * 2) / height);
+  const offsetX = (size - width * scale) / 2;
+  const offsetY = (size - height * scale) / 2;
+  return source.map((point) => ({
+    x: offsetX + (point.x - minX) * scale,
+    y: offsetY + (point.y - minY) * scale,
+  }));
+}
+
+function generatedShapePath(close = true) {
+  const points = normalizedShapePoints();
+  if (points.length === 0) return "";
+  return `${polylinePath(points)}${close && points.length > 2 ? " Z" : ""}`;
+}
+
+function generatedShapeStats() {
+  const points = normalizedShapePoints(220, 26);
+  if (points.length < 2) return { length: 0, turns: 0, spread: 0, read: "waiting" };
+  let length = 0;
+  let turns = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    length += distance(points[i - 1], points[i]);
+    if (i > 1) {
+      const a = Math.atan2(points[i - 1].y - points[i - 2].y, points[i - 1].x - points[i - 2].x);
+      const b = Math.atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+      turns += angleDiff(a, b);
+    }
+  }
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const spread = (Math.max(...xs) - Math.min(...xs)) / Math.max(1, Math.max(...ys) - Math.min(...ys));
+  const read = turns > 6 ? "angular" : spread > 1.18 ? "stretched" : "compact";
+  return { length: Math.round(length), turns: Math.round(turns * 10) / 10, spread: Math.round(spread * 100) / 100, read };
+}
+
 function livePath() {
   if (!state.pointer || !state.active || state.phase !== "drawing") return "";
   return `M ${state.active.x.toFixed(1)} ${state.active.y.toFixed(1)} L ${state.pointer.x.toFixed(1)} ${state.pointer.y.toFixed(1)}`;
@@ -506,6 +560,32 @@ function syncPreview() {
   if (preview) preview.textContent = markdownProfile();
 }
 
+function renderShapePreview() {
+  const stats = generatedShapeStats();
+  const complete = state.stageIndex >= STAGES.length;
+  const points = normalizedShapePoints();
+  return `
+    <section class="shape-preview" aria-label="Generated profile shape">
+      <div class="shape-preview-head">
+        <p class="question-label mono">generated shape</p>
+        <span class="shape-read mono">${escapeHtml(stats.read)}</span>
+      </div>
+      <svg class="shape-preview-svg" viewBox="0 0 260 260" role="img" aria-label="Generated onboarding mark preview">
+        <circle class="mini-orbit" cx="130" cy="130" r="102" />
+        <circle class="mini-orbit faint" cx="130" cy="130" r="54" />
+        <path class="mini-fill ${complete ? "is-final" : ""}" d="${generatedShapePath(true)}" />
+        <path class="mini-line" d="${generatedShapePath(false)}" />
+        ${points.map((point, index) => `<circle class="mini-node ${index === points.length - 1 ? "is-current" : ""}" cx="${point.x}" cy="${point.y}" r="${index === 0 ? 5 : 4}" />`).join("")}
+      </svg>
+      <div class="shape-facts">
+        <span><b>${state.commits.length}</b> crossings</span>
+        <span><b>${stats.length}</b> path</span>
+        <span><b>${stats.turns}</b> turn</span>
+      </div>
+    </section>
+  `;
+}
+
 function renderStageSvg() {
   const { w, h } = state.size;
   const orbitCx = w * 0.34;
@@ -559,7 +639,7 @@ function render() {
   const root = state.root || rootPoint();
   const stage = getStage();
   const complete = state.stageIndex >= STAGES.length;
-  app.className = `shape-shell ${complete ? "is-complete" : ""}`;
+  app.className = `shape-shell ${state.phase === "drawing" ? "is-drawing-shell" : ""} ${complete ? "is-complete" : ""}`;
   app.innerHTML = `
     <section class="stage-panel">
       <header class="stage-header">
@@ -588,6 +668,7 @@ function render() {
       </footer>
     </section>
     <aside class="side-panel">
+      ${renderShapePreview()}
       <section class="side-block">
         <p class="question-label mono">${complete ? "reveal" : `step ${Math.min(state.stageIndex + 1, STAGES.length)} / ${STAGES.length}`}</p>
         <h2 class="question-title">${complete ? "This is the onboarding mark." : escapeHtml(stage.label)}</h2>
