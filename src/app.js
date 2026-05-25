@@ -522,7 +522,6 @@ function renderRadialAllocator(control) {
       <circle class="grid-ring" cx="0" cy="0" r="${(currentRadii.max * 0.68).toFixed(1)}"></circle>
       <circle class="grid-ring" cx="0" cy="0" r="${currentRadii.max.toFixed(1)}"></circle>
       ${control.grammar === "color" && sum(control.id) > 0 ? `<polygon class="color-radar" points="${points.map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(" ")}"></polygon>` : ""}
-      ${control.grammar === "shape" && sum(control.id) > 0 ? renderShapeMix(control, currentRadii) : ""}
       ${control.axes.map((axis, index) => {
         const outer = point(index, control.axes.length, 100, currentRadii.min, currentRadii.max);
         const handle = points[index];
@@ -535,12 +534,13 @@ function renderRadialAllocator(control) {
             data-control="${control.id}" data-key="${axis.key}">
             <title>${axis.desc}</title>
             <line class="value-spoke" style="--axis-color:${axis.color}" x1="0" y1="0" x2="${handle.x.toFixed(1)}" y2="${handle.y.toFixed(1)}"></line>
+            <circle class="handle-hit" cx="${handle.x.toFixed(1)}" cy="${handle.y.toFixed(1)}" r="22"></circle>
             ${renderHandleMark(control, axis, handle.x, handle.y, values[axis.key])}
             ${values[axis.key] > 0 ? `<text class="handle-value" x="${handle.x.toFixed(1)}" y="${(handle.y + 28).toFixed(1)}" text-anchor="middle">${values[axis.key]}</text>` : ""}
           </g>
         `;
       }).join("")}
-      <circle class="center-pin" cx="0" cy="0" r="5"></circle>
+      ${sum(control.id) === 0 ? `<circle class="center-pin" cx="0" cy="0" r="5"></circle>` : ""}
       ${sum(control.id) === 0 ? `<text class="center-hint" x="0" y="24" text-anchor="middle">drag outward</text>` : ""}
     </svg>
   `;
@@ -551,33 +551,12 @@ function renderHandleMark(control, axis, x, y, value) {
   const growth = control.grammar === "shape" ? 0.46 : control.grammar === "color" ? 0.32 : 0.2;
   const size = clamp(12 + value * growth, 12, maxSize);
   if (control.grammar === "color") {
-    return `
-      <circle class="handle-shape handle-color" style="--axis-color:${axis.color}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size / 2).toFixed(1)}"></circle>
-      <circle class="handle-aura" style="--axis-color:${axis.color}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size * 0.86).toFixed(1)}"></circle>
-    `;
+    return `<circle class="handle-shape handle-color" style="--axis-color:${axis.color}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size / 2).toFixed(1)}"></circle>`;
   }
   if (control.grammar === "line") {
-    return `
-      <circle class="handle-shape handle-line-dot" style="--axis-color:${axis.color}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size / 2.9).toFixed(1)}"></circle>
-      <line class="handle-line-preview preview-${axis.shape}" x1="${(x - size * 0.54).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + size * 0.54).toFixed(1)}" y2="${y.toFixed(1)}"></line>
-    `;
+    return `<line class="handle-line-preview preview-${axis.shape}" x1="${(x - size * 0.72).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + size * 0.72).toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
   }
   return shapeMarkup(axis.shape, x.toFixed(1), y.toFixed(1), size, `class="handle-shape handle-neutral" style="--axis-color:${axis.color}"`);
-}
-
-function renderShapeMix(control, currentRadii) {
-  const values = state.values[control.id];
-  return `
-    <g class="shape-mix" aria-hidden="true">
-      ${control.axes.map((axis, index) => {
-        const value = values[axis.key];
-        if (value <= 0) return "";
-        const mixPoint = point(index, control.axes.length, value * 0.5, 0, currentRadii.max * 0.7);
-        const size = clamp(28 + value * 0.76, 30, 84);
-        return shapeMarkup(axis.shape, mixPoint.x.toFixed(1), mixPoint.y.toFixed(1), size, `class="mix-shape shape-${axis.shape}" style="--mix-alpha:${clamp(0.16 + value / 180, 0.18, 0.62)}"`);
-      }).join("")}
-    </g>
-  `;
 }
 
 function renderActiveStack(control) {
