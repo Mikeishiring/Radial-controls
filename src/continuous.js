@@ -107,6 +107,107 @@ const STAGES = [
 
 const COLORS = ["#d84b28", "#d6a84c", "#56b88d", "#5b9dce", "#9a80c7", "#c95f7f"];
 
+const SHAPE_PULLS = {
+  product: { r: 1.05, twist: -0.04, x: -0.1, y: -0.18 },
+  design: { r: 0.86, twist: 0.13, x: 0.2, y: -0.08 },
+  engineering: { r: 1.3, twist: -0.18, x: -0.24, y: 0.06 },
+  research: { r: 0.98, twist: 0.08, x: 0.12, y: -0.02 },
+  growth: { r: 1.14, twist: 0.12, x: 0.16, y: 0.08 },
+  frontend: { r: 1.02, twist: 0.02, x: 0.04, y: -0.12 },
+  fullstack: { r: 1.18, twist: -0.08, x: -0.12, y: -0.02 },
+  protocol: { r: 1.34, twist: -0.2, x: -0.18, y: 0.16 },
+  "product-design": { r: 0.82, twist: 0.18, x: 0.28, y: -0.04 },
+  pm: { r: 1.0, twist: 0.08, x: 0.06, y: 0.08 },
+  nyc: { r: 1.28, twist: -0.16, x: -0.3, y: -0.08 },
+  "sf-bay": { r: 1.12, twist: 0.06, x: 0.12, y: -0.1 },
+  london: { r: 1.04, twist: -0.02, x: -0.04, y: 0.08 },
+  "remote-us": { r: 0.78, twist: 0.22, x: 0.28, y: 0.1 },
+  europe: { r: 0.94, twist: 0.08, x: 0.1, y: 0.12 },
+  "ai-tools": { r: 1.1, twist: 0.1, x: 0.1, y: -0.12 },
+  mechanism: { r: 1.24, twist: -0.12, x: -0.14, y: 0.02 },
+  infra: { r: 1.28, twist: -0.1, x: -0.2, y: 0.16 },
+  community: { r: 0.88, twist: 0.18, x: 0.22, y: 0.06 },
+  markets: { r: 1.16, twist: -0.02, x: -0.06, y: -0.08 },
+  "async-first": { r: 0.78, twist: 0.24, x: 0.26, y: 0.12 },
+  "fast-dm": { r: 1.32, twist: -0.2, x: -0.24, y: -0.08 },
+  "issues-prs": { r: 1.08, twist: -0.04, x: -0.08, y: 0.1 },
+  "live-pair": { r: 1.0, twist: 0.12, x: 0.08, y: -0.02 },
+  "office-hours": { r: 0.92, twist: 0.14, x: 0.1, y: 0.14 },
+  review: { r: 1.04, twist: -0.04, x: -0.06, y: -0.04 },
+  "demo-build": { r: 1.16, twist: 0.02, x: -0.08, y: -0.12 },
+  "design-crit": { r: 0.84, twist: 0.2, x: 0.26, y: -0.04 },
+  docs: { r: 0.9, twist: 0.12, x: 0.12, y: 0.1 },
+  mornings: { r: 1.02, twist: -0.08, x: -0.08, y: -0.12 },
+  afternoons: { r: 0.98, twist: 0.06, x: 0.08, y: 0.02 },
+  "no-meet": { r: 1.2, twist: -0.14, x: -0.18, y: 0.1 },
+  "timezone-overlap": { r: 0.9, twist: 0.16, x: 0.18, y: 0.1 },
+  weekends: { r: 0.82, twist: 0.18, x: 0.2, y: 0.16 },
+  ship: { r: 1.26, twist: -0.16, x: -0.18, y: -0.1 },
+  learn: { r: 0.9, twist: 0.18, x: 0.18, y: -0.02 },
+  pair: { r: 0.96, twist: 0.1, x: 0.08, y: 0.04 },
+  "find-users": { r: 1.12, twist: 0.08, x: 0.14, y: -0.08 },
+  unblock: { r: 1.22, twist: -0.12, x: -0.18, y: 0.02 },
+  other: { r: 1.36, twist: 0.26, x: 0.18, y: 0.18 },
+};
+
+const GUIDE_OPTION_INDEX = 2;
+
+const PREDICTIVE_WEIGHTS = {
+  product: {
+    role: { pm: 5, frontend: 3, fullstack: 2 },
+    geo: { "sf-bay": 3, nyc: 2, london: 1 },
+    domain: { "ai-tools": 4, markets: 2, community: 1 },
+    comm_style: { "issues-prs": 3, "async-first": 2, "office-hours": 1 },
+    contribute: { "demo-build": 4, review: 2, docs: 1 },
+    intent: { ship: 5, "find-users": 3, unblock: 2 },
+  },
+  design: {
+    role: { "product-design": 6, frontend: 2, pm: 1 },
+    geo: { "remote-us": 3, nyc: 2, "sf-bay": 2 },
+    domain: { community: 3, "ai-tools": 2, mechanism: 1 },
+    comm_style: { "async-first": 4, "live-pair": 2, "office-hours": 2 },
+    contribute: { "design-crit": 5, "demo-build": 3, review: 2 },
+    intent: { learn: 3, ship: 3, pair: 2 },
+  },
+  engineering: {
+    role: { fullstack: 5, protocol: 4, frontend: 3 },
+    geo: { nyc: 3, "sf-bay": 3, "remote-us": 2 },
+    domain: { infra: 5, mechanism: 3, "ai-tools": 2 },
+    comm_style: { "issues-prs": 5, "async-first": 3, "fast-dm": 2 },
+    contribute: { review: 4, "demo-build": 3, docs: 2 },
+    availability: { "no-meet": 4, mornings: 3, "timezone-overlap": 2 },
+    intent: { ship: 5, unblock: 4, learn: 1 },
+  },
+  research: {
+    role: { protocol: 3, pm: 2, "product-design": 2 },
+    domain: { mechanism: 5, markets: 3, "ai-tools": 2 },
+    comm_style: { "async-first": 4, "issues-prs": 2, "office-hours": 2 },
+    contribute: { research: 5, review: 3, docs: 2 },
+    intent: { learn: 4, unblock: 2, ship: 1 },
+  },
+  nyc: {
+    comm_style: { "fast-dm": 4, "live-pair": 3, "issues-prs": 1 },
+    availability: { afternoons: 3, mornings: 2, "timezone-overlap": 1 },
+    intent: { ship: 4, pair: 2, "find-users": 2 },
+  },
+  "remote-us": {
+    comm_style: { "async-first": 5, "issues-prs": 3, "office-hours": 2 },
+    availability: { "timezone-overlap": 4, "no-meet": 3, mornings: 2 },
+    intent: { learn: 3, unblock: 3, ship: 2 },
+  },
+  "product-design": {
+    domain: { community: 3, "ai-tools": 2, mechanism: 2 },
+    comm_style: { "async-first": 4, "live-pair": 3 },
+    contribute: { "design-crit": 5, "demo-build": 3 },
+  },
+  protocol: {
+    domain: { infra: 5, mechanism: 4, markets: 2 },
+    comm_style: { "issues-prs": 5, "async-first": 3 },
+    availability: { "no-meet": 5, "timezone-overlap": 2 },
+    intent: { unblock: 4, ship: 3, learn: 2 },
+  },
+};
+
 const state = {
   phase: "idle",
   stageIndex: 0,
@@ -174,7 +275,7 @@ function fanRadius() {
 }
 
 function bubbleRadius() {
-  return state.size.w < 620 ? 34 : 52;
+  return state.size.w < 620 ? 31 : 46;
 }
 
 function mainAngle() {
@@ -183,17 +284,58 @@ function mainAngle() {
 }
 
 function clampOptionPoint(point) {
-  const margin = bubbleRadius() + 14;
+  const radius = bubbleRadius();
+  const sideMargin = radius + 14;
+  const topMargin = Math.min(state.size.h * 0.44, radius + 260);
+  const bottomMargin = radius + 92;
   return {
-    x: clamp(point.x, margin, state.size.w - margin),
-    y: clamp(point.y, margin, state.size.h - margin),
+    x: clamp(point.x, sideMargin, state.size.w - sideMargin),
+    y: clamp(point.y, topMargin, state.size.h - bottomMargin),
   };
 }
 
+function relaxOptionPoints(options) {
+  const desiredGap = bubbleRadius() * 2.08;
+  const sideMargin = bubbleRadius() + 14;
+  const relaxed = options.map((option) => ({ ...option, point: { ...option.point } }));
+  for (let pass = 0; pass < 5; pass += 1) {
+    for (let i = 0; i < relaxed.length; i += 1) {
+      for (let j = i + 1; j < relaxed.length; j += 1) {
+        const a = relaxed[i].point;
+        const b = relaxed[j].point;
+        if (Math.abs(a.y - b.y) > desiredGap * 0.72) continue;
+        const dx = b.x - a.x;
+        const overlap = desiredGap - Math.abs(dx);
+        if (overlap <= 0) continue;
+        const direction = dx >= 0 ? 1 : -1;
+        a.x = clamp(a.x - direction * overlap * 0.5, sideMargin, state.size.w - sideMargin);
+        b.x = clamp(b.x + direction * overlap * 0.5, sideMargin, state.size.w - sideMargin);
+      }
+    }
+  }
+  return relaxed;
+}
+
+function rankedStageOptions(stage) {
+  const scored = stage.options.map((option, originalIndex) => {
+    const [key] = option;
+    if (key === "other") return { option, originalIndex, score: -999 };
+    let score = stage.options.length - originalIndex;
+    for (const commit of state.commits) {
+      score += PREDICTIVE_WEIGHTS[commit.key]?.[stage.id]?.[key] || 0;
+    }
+    return { option, originalIndex, score };
+  });
+  scored.sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
+  return scored.map((item) => item.option);
+}
+
 function optionPositions() {
-  if (state.stageIndex >= STAGES.length || !state.active) return [];
+  if (state.stageIndex >= STAGES.length) return [];
+  const anchor = state.active || rootPoint();
   const stage = getStage();
-  const count = stage.options.length;
+  const optionsForStage = rankedStageOptions(stage);
+  const count = optionsForStage.length;
   if (state.size.w < 620 && count === 6) {
     const scale = clamp(state.size.h / 760, 0.88, 1.05);
     const offsets = [
@@ -201,42 +343,44 @@ function optionPositions() {
       [52, -124],
       [122, -80],
       [150, -8],
-      [128, 70],
-      [72, 138],
+      [154, 68],
+      [74, 148],
     ];
-    return stage.options.map(([key, label, signal], index) => ({
+    return relaxOptionPoints(optionsForStage.map(([key, label, signal], index) => ({
       key,
       label,
       signal,
       index,
+      predicted: state.commits.length > 0 && index < 2 && key !== "other",
       color: COLORS[index % COLORS.length],
       point: clampOptionPoint({
-        x: state.active.x + offsets[index][0] * scale,
-        y: state.active.y + offsets[index][1] * scale,
+        x: anchor.x + offsets[index][0] * scale,
+        y: anchor.y + offsets[index][1] * scale,
       }),
       angle: Math.atan2(offsets[index][1], offsets[index][0]),
-    }));
+    })));
   }
   const radius = fanRadius();
   const spread = (count > 5 ? 132 : 112) * Math.PI / 180;
   const start = mainAngle() - spread / 2;
   const step = count === 1 ? 0 : spread / (count - 1);
-  return stage.options.map(([key, label, signal], index) => {
+  return relaxOptionPoints(optionsForStage.map(([key, label, signal], index) => {
     const angle = start + step * index;
     const raw = {
-      x: state.active.x + Math.cos(angle) * radius,
-      y: state.active.y + Math.sin(angle) * radius,
+      x: anchor.x + Math.cos(angle) * radius,
+      y: anchor.y + Math.sin(angle) * radius,
     };
     return {
       key,
       label,
       signal,
       index,
+      predicted: state.commits.length > 0 && index < 2 && key !== "other",
       color: COLORS[index % COLORS.length],
       point: clampOptionPoint(raw),
       angle,
     };
-  });
+  }));
 }
 
 function toLocalPoint(event) {
@@ -363,15 +507,19 @@ function moveGesture(event) {
     if (state.active && distance(point, state.active) > bubbleRadius() * 0.92) {
       state.armed = true;
     } else {
-      queueRender();
+      renderGestureFrame();
       return;
     }
   }
 
   const option = nearestCommitOption(point);
   state.hotOption = option ? option.key : null;
-  if (option) commitOption(option);
-  queueRender();
+  if (option) {
+    commitOption(option);
+    queueRender();
+    return;
+  }
+  renderGestureFrame();
 }
 
 function endGesture(event) {
@@ -429,17 +577,43 @@ function shapePath() {
   return `${polylinePath(state.trail)} Z`;
 }
 
+function semanticCommits() {
+  return STAGES.map((stage, index) => {
+    const selected = state.commits.find((commit) => commit.stage === stage.id);
+    if (selected) return { ...selected, ghost: false };
+    const fallback = stage.options[Math.min(GUIDE_OPTION_INDEX, stage.options.length - 1)];
+    return {
+      stage: stage.id,
+      label: stage.label,
+      key: fallback[0],
+      value: fallback[1],
+      signal: fallback[2],
+      ghost: true,
+    };
+  });
+}
+
+function semanticSourcePoints() {
+  const commits = semanticCommits();
+  const count = Math.max(1, commits.length);
+  return commits.map((commit, index) => {
+    const pull = SHAPE_PULLS[commit.key] || SHAPE_PULLS.other;
+    const stage = STAGES.find((item) => item.id === commit.stage);
+    const optionIndex = Math.max(0, stage?.options.findIndex((option) => option[0] === commit.key) ?? 0);
+    const base = -Math.PI / 2 + (index / count) * Math.PI * 2;
+    const angle = base + (pull.twist || 0) + (optionIndex - 2.5) * 0.018;
+    const radius = 86 * (pull.r || 1);
+    return {
+      x: Math.cos(angle) * radius + (pull.x || 0) * 44,
+      y: Math.sin(angle) * radius + (pull.y || 0) * 44,
+      ghost: commit.ghost,
+      key: commit.key,
+    };
+  });
+}
+
 function normalizedShapePoints(size = 260, pad = 28) {
-  const source = state.trail.length > 1
-    ? state.trail
-    : [
-      { x: 0, y: 54 },
-      { x: 86, y: 16 },
-      { x: 172, y: 52 },
-      { x: 214, y: 128 },
-      { x: 142, y: 210 },
-      { x: 42, y: 184 },
-    ];
+  const source = semanticSourcePoints();
   const xs = source.map((point) => point.x);
   const ys = source.map((point) => point.y);
   const minX = Math.min(...xs);
@@ -454,17 +628,24 @@ function normalizedShapePoints(size = 260, pad = 28) {
   return source.map((point) => ({
     x: offsetX + (point.x - minX) * scale,
     y: offsetY + (point.y - minY) * scale,
+    ghost: point.ghost,
+    key: point.key,
   }));
 }
 
 function generatedShapePath(close = true) {
-  const points = normalizedShapePoints();
-  if (points.length === 0) return "";
+  const points = normalizedShapePoints().filter((point) => !point.ghost);
+  if (points.length < 2) return "";
   return `${polylinePath(points)}${close && points.length > 2 ? " Z" : ""}`;
 }
 
+function generatedGuidePath() {
+  const points = normalizedShapePoints();
+  return points.length > 2 ? `${polylinePath(points)} Z` : "";
+}
+
 function generatedShapeStats() {
-  const points = normalizedShapePoints(220, 26);
+  const points = normalizedShapePoints(220, 26).filter((point) => !point.ghost);
   if (points.length < 2) return { length: 0, turns: 0, spread: 0, read: "waiting" };
   let length = 0;
   let turns = 0;
@@ -479,7 +660,20 @@ function generatedShapeStats() {
   const xs = points.map((point) => point.x);
   const ys = points.map((point) => point.y);
   const spread = (Math.max(...xs) - Math.min(...xs)) / Math.max(1, Math.max(...ys) - Math.min(...ys));
-  const read = turns > 6 ? "angular" : spread > 1.18 ? "stretched" : "compact";
+  const keys = state.commits.map((commit) => commit.key);
+  const hasSharp = keys.some((key) => ["engineering", "fullstack", "protocol", "nyc", "infra", "fast-dm", "ship", "unblock"].includes(key));
+  const hasRounded = keys.some((key) => ["design", "product-design", "remote-us", "async-first", "community", "design-crit", "learn"].includes(key));
+  const read = state.commits.length === 0
+    ? "forming"
+    : hasSharp && keys.includes("nyc")
+      ? "triangular"
+      : hasRounded && (keys.includes("remote-us") || keys.includes("async-first"))
+        ? "rounded"
+        : turns > 6
+          ? "angular"
+          : spread > 1.18
+            ? "stretched"
+            : "compact";
   return { length: Math.round(length), turns: Math.round(turns * 10) / 10, spread: Math.round(spread * 100) / 100, read };
 }
 
@@ -494,7 +688,7 @@ function currentSummary() {
   if (state.stageIndex >= STAGES.length) {
     return `Shape reads ${state.commits.map((item) => item.value).slice(0, 4).join(" / ")} with ${last.value} as the closing intention.`;
   }
-  return `${last.value} selected. Keep holding and cross into the next bubble.`;
+  return `${last.value} selected. Cross into the next bubble.`;
 }
 
 function markdownProfile() {
@@ -560,6 +754,19 @@ function syncPreview() {
   if (preview) preview.textContent = markdownProfile();
 }
 
+function renderGestureFrame() {
+  const live = app.querySelector(".live-path");
+  if (live) live.setAttribute("d", livePath());
+  const cursor = app.querySelector(".cursor-halo");
+  if (cursor && state.pointer) {
+    cursor.style.left = `${state.pointer.x}px`;
+    cursor.style.top = `${state.pointer.y}px`;
+  }
+  app.querySelectorAll(".option-bubble").forEach((bubble) => {
+    bubble.classList.toggle("is-hot", bubble.dataset.option === state.hotOption);
+  });
+}
+
 function renderShapePreview() {
   const stats = generatedShapeStats();
   const complete = state.stageIndex >= STAGES.length;
@@ -573,9 +780,10 @@ function renderShapePreview() {
       <svg class="shape-preview-svg" viewBox="0 0 260 260" role="img" aria-label="Generated onboarding mark preview">
         <circle class="mini-orbit" cx="130" cy="130" r="102" />
         <circle class="mini-orbit faint" cx="130" cy="130" r="54" />
+        <path class="mini-guide-shape" d="${generatedGuidePath()}" />
         <path class="mini-fill ${complete ? "is-final" : ""}" d="${generatedShapePath(true)}" />
         <path class="mini-line" d="${generatedShapePath(false)}" />
-        ${points.map((point, index) => `<circle class="mini-node ${index === points.length - 1 ? "is-current" : ""}" cx="${point.x}" cy="${point.y}" r="${index === 0 ? 5 : 4}" />`).join("")}
+        ${points.map((point, index) => `<circle class="mini-node ${point.ghost ? "is-ghost" : "is-selected"} ${!point.ghost && index === state.commits.length - 1 ? "is-current" : ""} ${point.ghost && index === state.commits.length ? "is-next" : ""}" cx="${point.x}" cy="${point.y}" r="${!point.ghost && index === state.commits.length - 1 ? 6 : 4}" />`).join("")}
       </svg>
       <div class="shape-facts">
         <span><b>${state.commits.length}</b> crossings</span>
@@ -611,7 +819,7 @@ function renderOptions() {
   if (state.stageIndex >= STAGES.length) return "";
   return optionPositions().map((option) => `
     <button
-      class="option-bubble ${option.key === state.hotOption ? "is-hot" : ""} ${option.key === "other" ? "is-other" : ""}"
+      class="option-bubble ${option.key === state.hotOption ? "is-hot" : ""} ${option.key === "other" ? "is-other" : ""} ${option.predicted ? "is-predicted" : ""}"
       data-option="${escapeHtml(option.key)}"
       style="left:${option.point.x}px;top:${option.point.y}px;--choice-color:${option.color};"
       type="button"
@@ -620,7 +828,7 @@ function renderOptions() {
       <span class="bubble-index">${option.index + 1}</span>
       <span>
         <span class="bubble-label">${escapeHtml(option.label)}</span>
-        <span class="bubble-signal">${escapeHtml(option.signal)}</span>
+        <span class="bubble-signal">${escapeHtml(option.predicted ? `suggested / ${option.signal}` : option.signal)}</span>
       </span>
     </button>
   `).join("");
@@ -705,9 +913,6 @@ function render() {
   `;
 
   stageEl = app.querySelector("[data-stage]");
-  stageEl.addEventListener("pointermove", moveGesture);
-  stageEl.addEventListener("pointerup", endGesture);
-  stageEl.addEventListener("pointercancel", endGesture);
   app.querySelector("[data-root]").addEventListener("pointerdown", startGesture);
   app.querySelectorAll("[data-option]").forEach((button) => {
     button.addEventListener("click", () => selectByClick(button.dataset.option));
