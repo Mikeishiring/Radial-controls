@@ -14,8 +14,11 @@ fs.mkdirSync(dist, { recursive: true });
 
 copyFile(path.join(root, "index.html"), path.join(dist, "index.html"));
 copyFile(path.join(root, "demo-one.html"), path.join(dist, "demo-one.html"));
+copyFile(path.join(root, "continuous.html"), path.join(dist, "continuous.html"));
 copyFile(path.join(root, "src", "styles.css"), path.join(dist, "src", "styles.css"));
 copyFile(path.join(root, "src", "app.js"), path.join(dist, "src", "app.js"));
+copyFile(path.join(root, "src", "continuous.css"), path.join(dist, "src", "continuous.css"));
+copyFile(path.join(root, "src", "continuous.js"), path.join(dist, "src", "continuous.js"));
 
 fs.writeFileSync(
   path.join(dist, "_headers"),

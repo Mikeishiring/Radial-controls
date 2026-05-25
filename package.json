@@ -7,6 +7,7 @@
     "build": "node scripts/build-public.js",
     "start": "node server.js",
     "verify": "node scripts/verify-cdp.js",
+    "verify:continuous": "node scripts/verify-continuous-cdp.js",
     "deploy": "npm run build && npx wrangler pages deploy dist --project-name radial-controls --branch main --commit-hash local-demo --commit-message \"Public Onboarding V1 radial-controls demo\" --commit-dirty=true"
   }
 }
