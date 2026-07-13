@@ -62,6 +62,24 @@ function connect(wsUrl) {
   });
 }
 
+async function evaluate(cdp, sessionId, expression) {
+  const result = await cdp.send("Runtime.evaluate", {
+    awaitPromise: true,
+    returnByValue: true,
+    expression,
+  }, sessionId);
+  if (result.exceptionDetails) throw new Error(result.exceptionDetails.text || "verification evaluation failed");
+  return result.result.value;
+}
+
+async function capture(cdp, sessionId, file) {
+  const shot = await cdp.send("Page.captureScreenshot", {
+    format: "png",
+    captureBeyondViewport: false,
+  }, sessionId);
+  fs.writeFileSync(file, Buffer.from(shot.data, "base64"));
+}
+
 async function main() {
   const edge = spawn(edgePath, [
     "--headless=new",
@@ -94,39 +112,104 @@ async function main() {
     }, sessionId);
     await delay(700);
 
-    const result = await cdp.send("Runtime.evaluate", {
-      awaitPromise: true,
-      returnByValue: true,
-      expression: `(async () => {
+    const top = await evaluate(cdp, sessionId, `(async () => {
         const seed = document.querySelector('[data-action="seed"]');
         if (seed) seed.click();
         await new Promise((resolve) => setTimeout(resolve, 120));
+        const firstHandle = document.querySelector('[role="slider"]');
+        firstHandle?.focus();
+        firstHandle?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        scrollTo(0, 0);
+        return {
+          title: document.title,
+          heading: document.querySelector(".brand-title")?.textContent,
+          handles: document.querySelectorAll('[role="slider"]').length,
+          labelledHandles: [...document.querySelectorAll('[role="slider"]')].filter((node) => node.getAttribute('aria-label')).length,
+          keyboardFocus: document.activeElement?.getAttribute('role') === 'slider',
+          keyboardValue: document.activeElement?.getAttribute('aria-valuenow'),
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth
+        };
+      })()`);
+    await capture(cdp, sessionId, "prototype-radial-controls-top.png");
+
+    const desktop = await evaluate(cdp, sessionId, `(async () => {
+        const reveal = document.querySelector('[data-action="reveal"]');
+        if (reveal) reveal.click();
+        await new Promise((resolve) => setTimeout(resolve, 220));
         return {
           title: document.title,
           heading: document.querySelector(".brand-title")?.textContent,
           mark: document.querySelector(".reveal-head h2")?.textContent,
-          hasJson: Boolean(document.querySelector(".json-preview")?.textContent.includes("onboarding-v1-radial-controls")),
+          hasJson: Boolean(document.querySelector(".json-preview")?.textContent.includes("radial-controls-preference-profile")),
           scrollWidth: document.documentElement.scrollWidth,
           clientWidth: document.documentElement.clientWidth
         };
-      })()`,
-    }, sessionId);
+      })()`);
+    await capture(cdp, sessionId, "prototype-radial-controls.png");
 
-    if (result.exceptionDetails) {
-      throw new Error(result.exceptionDetails.text || "verification evaluation failed");
+    const responsive = {};
+    for (const width of [768, 375, 320]) {
+      await cdp.send("Emulation.setDeviceMetricsOverride", {
+        width,
+        height: width <= 375 ? 844 : 900,
+        deviceScaleFactor: 1,
+        mobile: width <= 375,
+      }, sessionId);
+      await cdp.send("Page.navigate", { url: `http://localhost:${appPort}/` }, sessionId);
+      await delay(500);
+      responsive[width] = await evaluate(cdp, sessionId, `(async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        document.querySelector('[data-action="seed"]')?.click();
+        await wait(120);
+        scrollTo(0, 0);
+        const clipped = [...document.querySelectorAll('button, a, input')]
+          .filter((node) => {
+            const rect = node.getBoundingClientRect();
+            return rect.right > innerWidth + 1 || rect.left < -1;
+          })
+          .map((node) => node.className || node.tagName)
+          .slice(0, 6);
+        return {
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+          clipped
+        };
+      })()`);
+      await capture(cdp, sessionId, `prototype-radial-controls-${width}.png`);
     }
 
-    const value = result.result.value;
-    if (!value.title.includes("Onboarding V1") || !value.hasJson || value.scrollWidth > value.clientWidth + 1) {
-      throw new Error(JSON.stringify(value, null, 2));
+    await cdp.send("Emulation.setDeviceMetricsOverride", {
+      width: 1440,
+      height: 950,
+      deviceScaleFactor: 1,
+      mobile: false,
+    }, sessionId);
+    await cdp.send("Emulation.setEmulatedMedia", {
+      features: [{ name: "prefers-color-scheme", value: "light" }],
+    }, sessionId);
+    await cdp.send("Page.navigate", { url: `http://localhost:${appPort}/` }, sessionId);
+    await delay(500);
+    const light = await evaluate(cdp, sessionId, `(async () => {
+      document.querySelector('[data-action="seed"]')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      scrollTo(0, 0);
+      return {
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+        scheme: getComputedStyle(document.documentElement).colorScheme,
+        background: getComputedStyle(document.body).backgroundColor
+      };
+    })()`);
+    await capture(cdp, sessionId, "prototype-radial-controls-light.png");
+
+    const failedResponsive = Object.values(responsive).some((value) => value.scrollWidth > value.clientWidth + 1 || value.clipped.length > 0);
+    if (!desktop.title.includes("Preference Profile") || !desktop.hasJson || desktop.scrollWidth > desktop.clientWidth + 1 || top.handles !== top.labelledHandles || !top.keyboardFocus || failedResponsive || light.scrollWidth > light.clientWidth + 1) {
+      throw new Error(JSON.stringify({ top, desktop, responsive, light }, null, 2));
     }
 
-    const shot = await cdp.send("Page.captureScreenshot", {
-      format: "png",
-      captureBeyondViewport: false,
-    }, sessionId);
-    fs.writeFileSync("prototype-radial-controls.png", Buffer.from(shot.data, "base64"));
-    console.log(JSON.stringify(value, null, 2));
+    console.log(JSON.stringify({ top, desktop, responsive, light }, null, 2));
   } finally {
     if (cdp) cdp.close();
     edge.kill();

@@ -37,5 +37,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`Onboarding V1 radial-controls prototype: http://localhost:${port}`);
+  console.log(`Radial Controls: http://localhost:${port}`);
 });

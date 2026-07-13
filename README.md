@@ -1,10 +1,15 @@
-# Onboarding V1
+# Radial Controls
+
+Direct-manipulation onboarding for a self-set preference profile.
 
 Public demo: https://radial-controls.pages.dev/
 
-This repo is the canonical onboarding product: the radial-controls onboarding flow formerly labeled Onboarding V1. It explores direct-manipulation weighted radial allocation, continuous shape drawing, color/shape/line semantics, budget balancing, and the generated semantic mark.
+## Surfaces
 
-It is not Sorting Hat and it is not the reusable `radial-dial` component library. The hidden-shape Onboarding V2 flow has been retired in favor of this direction.
+- `/` and `/demo-one.html` use three weighted radial controls for color, contribution shape, and interaction line. Each control has a 100-point budget.
+- `/continuous.html` records eight choices as one uninterrupted path and derives a profile mark from that route.
+
+Both surfaces expose exact values or choices alongside the visual mark and export structured text. Suggestions in the continuous flow come only from earlier choices; `Other` remains available at every step.
 
 ## Run
 
@@ -12,9 +17,7 @@ It is not Sorting Hat and it is not the reusable `radial-dial` component library
 npm start
 ```
 
-Then open `http://localhost:4173`.
-
-Root and `http://localhost:4173/demo-one.html` both load the Onboarding V1 radial-controls prototype. `http://localhost:4173/continuous.html` is an Onboarding V1 continuous radial-controls variant, not Onboarding V2.
+Open `http://localhost:4173`.
 
 ## Verify
 
@@ -23,7 +26,7 @@ npm run verify
 npm run verify:continuous
 ```
 
-These checks confirm that the Onboarding V1 radial-control surface loads, the continuous V1 variant renders on desktop and mobile, the semantic readouts exist, and both surfaces avoid horizontal overflow.
+The checks exercise the generated output, accessible control labels, and responsive layouts at desktop, tablet, and 375/320px mobile widths. They also save screenshots for visual inspection.
 
 ## Deploy
 
@@ -31,12 +34,11 @@ These checks confirm that the Onboarding V1 radial-control surface loads, the co
 npm run deploy
 ```
 
-This project deploys only to the Cloudflare Pages project `radial-controls`, which serves the canonical onboarding flow at `https://radial-controls.pages.dev/`.
+The command builds `dist` and deploys it to the `radial-controls` Cloudflare Pages project.
 
-## Project Boundary
+## Project boundary
 
-- `Radial-controls`: canonical onboarding product, formerly Onboarding V1. GitHub: `Mikeishiring/Radial-controls`. Cloudflare Pages: `radial-controls` / `https://radial-controls.pages.dev/`.
-- `Shape-onboarding`: retired Onboarding V2 archive. GitHub: `Mikeishiring/Shape-onboarding`. Cloudflare Pages: `shape-onboarding` / `https://shape-onboarding.pages.dev/`, redirected to this product.
-- `Sorting-hat`: separate routing-mark identity project, not an onboarding version. GitHub: `Mikeishiring/Sorting-hat`. Cloudflare Pages: `sorting-hat` / `https://sorting-hat-ak1.pages.dev/`.
-
-Related origin note: `radial-dial` is a reusable React marking-menu/radial-dials component, not one of the three deployed products above.
+- `Radial-controls` is the canonical preference-profile onboarding product, formerly labeled Onboarding V1.
+- `Shape-onboarding` is the retired Onboarding V2 archive and redirects here.
+- `Sorting-hat` is a separate routing-mark identity project.
+- `radial-dial` is the reusable React marking-menu component, not an onboarding product.

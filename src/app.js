@@ -1,4 +1,4 @@
-const today = "2026-05-25";
+const today = new Date().toISOString().slice(0, 10);
 
 const controls = [
   {
@@ -11,21 +11,21 @@ const controls = [
         key: "discover",
         label: "Open",
         short: "blue",
-        color: "#5FA8FF",
+        color: "#357BB8",
         desc: "Still discovering. Route adjacent examples, people, and context.",
       },
       {
         key: "ship",
         label: "Shipping",
         short: "green",
-        color: "#6EE7B7",
+        color: "#2F9873",
         desc: "Actively moving something forward. Route specific blockers and useful proof.",
       },
       {
         key: "help",
         label: "Available",
         short: "amber",
-        color: "#FFB454",
+        color: "#A8661F",
         desc: "Available to help others. Route review, pairing, and lightweight asks.",
       },
     ],
@@ -141,7 +141,7 @@ const emptyValues = () => Object.fromEntries(
 );
 
 const state = {
-  values: balancedValues(),
+  values: emptyValues(),
   active: null,
   hovered: null,
   revealed: false,
@@ -202,8 +202,8 @@ function geometryScale() {
 function radii() {
   const scale = geometryScale();
   return {
-    min: 12,
-    max: clamp(112 * scale, 94, 146),
+    min: 34,
+    max: clamp(116 * scale, 98, 146),
   };
 }
 
@@ -239,8 +239,18 @@ function setAxisValue(controlId, key, requestedValue, options = {}) {
 
   state.values[controlId] = values;
   state.revealed = false;
-  if (options.immediate) render();
-  else scheduleRender();
+  if (options.immediate) {
+    render();
+    if (options.restoreFocus) restoreFocus(options.restoreFocus);
+  } else {
+    scheduleRender();
+  }
+}
+
+function restoreFocus(selector) {
+  requestAnimationFrame(() => {
+    app.querySelector(selector)?.focus({ preventScroll: true });
+  });
 }
 
 function scheduleRender() {
@@ -335,7 +345,7 @@ function snapshot() {
     updated_at: today,
     person: slugify(state.personId),
     visibility: state.visibility,
-    source: "onboarding-v1-radial-controls",
+    source: "radial-controls-preference-profile",
     completion: completion(),
     mode_color: { ...state.values.mode },
     contribution_shape: { ...state.values.craft },
@@ -383,53 +393,76 @@ function shapeMarkup(shape, x, y, size, attrs = "") {
 function render() {
   measureSpace();
   const snap = snapshot();
+  const progress = completion();
   app.innerHTML = `
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="3"></circle>
+            <path d="M16 13V5M18.7 17.6l7 4M13.3 17.6l-7 4"></path>
+            <circle cx="16" cy="4.5" r="2"></circle>
+            <circle cx="26.2" cy="21.8" r="2"></circle>
+            <circle cx="5.8" cy="21.8" r="2"></circle>
+          </svg>
+        </div>
         <div>
-          <div class="brand-kicker">Onboarding V1</div>
-          <h1 class="brand-title">Pull radial controls into shape.</h1>
+          <div class="brand-kicker">Preference profile</div>
+          <h1 class="brand-title">Shape how people work with you.</h1>
+          <p class="brand-intro">Allocate 100 points in each field. The result becomes a compact signal people can read at a glance.</p>
         </div>
       </div>
-      <div class="top-actions demo-controls">
-        <label class="range-control">
-          <span>Spread</span>
-          <input type="range" min="70" max="125" value="${Math.round(state.lineLength * 100)}" data-field="lineLength" />
-        </label>
-        <label class="select-control">
-          <span>View</span>
-          <select data-field="pathMode">
-            ${[
-              ["both", "Mark + path"],
-              ["shape", "Mark only"],
-              ["text", "Path only"],
-            ].map(([value, label]) => `<option value="${value}" ${state.pathMode === value ? "selected" : ""}>${label}</option>`).join("")}
-          </select>
-        </label>
-        <button class="ghost-button" type="button" data-action="seed">${icon("spark")} Example</button>
-        <button class="ghost-button" type="button" data-action="reset">${icon("rotate-ccw")} Balance</button>
-        <button class="ghost-button quiet-action" type="button" data-action="clear">Clear</button>
-        <button class="primary-button" type="button" data-action="reveal" ${isComplete() ? "" : "disabled"}>
-          ${icon("eye")} ${state.revealed ? "Mark revealed" : "Reveal mark"}
+      <a class="variant-link" href="continuous.html">Continuous draw <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <section class="flow-bar" aria-label="Profile progress">
+      <div class="flow-status">
+        <span class="micro-label">Progress</span>
+        <strong>${progress}% allocated</strong>
+        <span>Self-set · 3 controls · 100 points each</span>
+      </div>
+      <div class="top-actions">
+        <button class="ghost-button" type="button" data-action="seed">${icon("spark")} Use example</button>
+        <button class="ghost-button" type="button" data-action="reset">${icon("balance")} Even split</button>
+        <button class="ghost-button quiet-action" type="button" data-action="clear">Start over</button>
+        <button class="primary-button progress-button" style="--progress-ratio:${progress / 100}" type="button" data-action="reveal" aria-controls="profile-output" ${isComplete() ? "" : "disabled"}>
+          ${icon("eye")} ${state.revealed ? "View profile" : "Reveal profile"}
         </button>
       </div>
-    </header>
+    </section>
 
     <section class="demo-grid" aria-label="Three semantic controls">
       ${controls.map(renderControl).join("")}
     </section>
 
-    <section class="reveal-panel ${state.revealed ? "is-revealed" : ""}" aria-label="Semantic mark reveal">
+    ${state.revealed ? renderReveal(snap) : `
+      <section class="pre-reveal" id="profile-output" aria-label="Profile output status">
+        <span class="micro-label">Generated profile</span>
+        <p>${isComplete() ? "All three budgets are set. Reveal the profile when you are ready." : "The profile resolves after each control reaches 100 points."}</p>
+      </section>
+    `}
+    ${state.copied ? `<div class="toast" role="status">${state.copied}</div>` : ""}
+  `;
+  wireEvents();
+}
+
+function renderReveal(snap) {
+  return `
+    <section class="reveal-panel is-revealed" id="profile-output" aria-label="Generated preference profile">
       <div class="reveal-main">
         <div class="reveal-head">
           <div>
-            <div class="micro-label">Semantic mark</div>
+            <div class="micro-label">Generated mark</div>
             <h2>${snap.semantic_mark.name}</h2>
           </div>
-          <div class="completion-badge" data-complete="${isComplete()}">
-            <span>${snap.completion}%</span>
-            <small>${300 - controls.reduce((total, control) => total + sum(control.id), 0)} points left</small>
+          <div class="segmented compact-segments" role="group" aria-label="Profile view">
+            ${[
+              ["shape", "Mark"],
+              ["both", "Both"],
+              ["text", "Path"],
+            ].map(([value, label]) => `
+              <button class="segment" type="button" data-action="set-path" data-value="${value}" aria-pressed="${state.pathMode === value}">${label}</button>
+            `).join("")}
           </div>
         </div>
         <div class="reveal-stage" data-mode="${state.pathMode}">
@@ -438,58 +471,60 @@ function render() {
         </div>
       </div>
       <aside class="readout-panel">
-        <div class="micro-label">What the mark means</div>
+        <div class="micro-label">Plain-language read</div>
         <p class="readout-sentence">${snap.routing_sentence}</p>
         ${renderHoverInsight()}
-        <div class="form-grid">
-          <label>
-            <span class="field-label">person id</span>
-            <input class="text-input" value="${escapeAttr(state.personId)}" data-field="personId" />
-          </label>
-          <label>
-            <span class="field-label">visibility</span>
-            <select class="select-input" data-field="visibility">
-              ${["cohort-public", "organizer-only", "public"].map((item) => `<option value="${item}" ${item === state.visibility ? "selected" : ""}>${item}</option>`).join("")}
-            </select>
-          </label>
+        <label class="identity-field">
+          <span class="field-label">Profile id</span>
+          <input class="text-input" value="${escapeAttr(state.personId)}" data-field="personId" autocomplete="off" spellcheck="false" aria-label="Profile id" />
+        </label>
+        <div class="visibility-field">
+          <span class="field-label">Visible to</span>
+          <div class="segmented" role="group" aria-label="Profile visibility">
+            ${[
+              ["cohort-public", "Cohort"],
+              ["organizer-only", "Organizers"],
+              ["public", "Public"],
+            ].map(([value, label]) => `
+              <button class="segment" type="button" data-action="set-visibility" data-value="${value}" aria-pressed="${state.visibility === value}">${label}</button>
+            `).join("")}
+          </div>
         </div>
         <div class="output-actions">
           <button class="primary-button" type="button" data-action="copy">${icon("copy")} Copy JSON</button>
           <button class="ghost-button" type="button" data-action="copy-markdown">${icon("copy")} Copy markdown</button>
         </div>
         <details class="data-drawer">
-          <summary>Schema preview</summary>
+          <summary>Inspect profile data</summary>
           <pre class="json-preview">${escapeHtml(JSON.stringify(snap, null, 2))}</pre>
         </details>
       </aside>
     </section>
-    ${state.copied ? `<div class="toast" role="status">${state.copied}</div>` : ""}
   `;
-  wireEvents();
 }
 
 function renderControl(control) {
   const total = sum(control.id);
   const activeDominant = dominant(control.id);
   const controlColor = activeDominant?.color || "#F7F1EC";
+  const step = controls.indexOf(control) + 1;
   return `
     <article class="control-card grammar-${control.grammar} ${total === 0 ? "is-empty" : ""}" style="--control-color:${controlColor}; --control-rgb:${hexToRgb(controlColor)}">
       <header class="control-head">
-        <div>
+        <div class="control-title-row">
+          <span class="step-number" aria-hidden="true">0${step}</span>
+          <div>
           <div class="micro-label">${control.title}</div>
           <h2>${control.prompt}</h2>
+          </div>
         </div>
-        <div class="budget-meter" aria-label="${control.title} allocation">
-          <strong>${total}</strong>
-          <span>/100</span>
-        </div>
+        <span class="control-state" data-ready="${total === 100}">${total === 100 ? "Ready" : "Set the mix"}</span>
       </header>
       <div class="control-body">
         ${renderRadialAllocator(control)}
         ${renderActiveStack(control)}
       </div>
-      <footer class="control-foot">
-        <span>${remaining(control.id)} unallocated</span>
+      <footer class="control-foot" aria-label="${control.title}: ${total} of 100 points allocated">
         ${renderAllocationStrip(control)}
       </footer>
     </article>
@@ -500,56 +535,46 @@ function renderRadialAllocator(control) {
   const currentRadii = radii();
   const values = state.values[control.id];
   const points = control.axes.map((axis, index) => point(index, control.axes.length, values[axis.key], currentRadii.min, currentRadii.max));
-  const meshId = `mesh-${control.id}`;
-  const activeDominant = dominant(control.id);
-  const visualColor = control.grammar === "color" ? activeDominant?.color || "#F7F1EC" : "#F7F1EC";
+  const total = sum(control.id);
+  const summary = control.axes.map((axis) => `${axis.label} ${values[axis.key]} points`).join(", ");
   return `
-    <svg class="allocator grammar-${control.grammar}" data-control="${control.id}" viewBox="-190 -170 380 340" role="img" aria-label="${control.title} radial selector">
-      <defs>
-        <radialGradient id="glow-${control.id}">
-          <stop offset="0%" stop-color="#F7F1EC" stop-opacity="0.16"></stop>
-          <stop offset="50%" stop-color="${visualColor}" stop-opacity="${control.grammar === "color" ? "0.26" : "0.13"}"></stop>
-          <stop offset="100%" stop-color="${visualColor}" stop-opacity="0"></stop>
-        </radialGradient>
-        <clipPath id="${meshId}">
-          <circle cx="0" cy="0" r="${(currentRadii.max + 20).toFixed(1)}"></circle>
-        </clipPath>
-      </defs>
-      <circle class="allocator-glow" cx="0" cy="0" r="${32 + sum(control.id) * 0.66 * geometryScale()}" fill="url(#glow-${control.id})"></circle>
-      <g class="phase-mesh phase-mesh-a" clip-path="url(#${meshId})">${renderMeshLines(currentRadii.max + 14, 28)}</g>
-      <g class="phase-mesh phase-mesh-b" clip-path="url(#${meshId})">${renderMeshLines(currentRadii.max + 14, 44)}</g>
-      <circle class="grid-ring" cx="0" cy="0" r="${(currentRadii.max * 0.36).toFixed(1)}"></circle>
-      <circle class="grid-ring" cx="0" cy="0" r="${(currentRadii.max * 0.68).toFixed(1)}"></circle>
+    <svg class="allocator grammar-${control.grammar}" data-control="${control.id}" viewBox="-190 -170 380 340" role="group" aria-label="${control.title} radial allocation: ${summary}">
+      <desc>Drag a mark along its spoke. Position maps linearly from 0 to 100 points. ${summary}.</desc>
+      <circle class="grid-ring grid-ring-quarter" cx="0" cy="0" r="${(currentRadii.min + (currentRadii.max - currentRadii.min) * 0.25).toFixed(1)}"></circle>
+      <circle class="grid-ring grid-ring-half" cx="0" cy="0" r="${(currentRadii.min + (currentRadii.max - currentRadii.min) * 0.5).toFixed(1)}"></circle>
+      <circle class="grid-ring grid-ring-three-quarter" cx="0" cy="0" r="${(currentRadii.min + (currentRadii.max - currentRadii.min) * 0.75).toFixed(1)}"></circle>
       <circle class="grid-ring" cx="0" cy="0" r="${currentRadii.max.toFixed(1)}"></circle>
-      ${control.grammar === "color" && sum(control.id) > 0 ? `<polygon class="color-radar" points="${points.map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(" ")}"></polygon>` : ""}
+      ${control.grammar === "color" && total > 0 ? `<polygon class="color-radar" points="${points.map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(" ")}"></polygon>` : ""}
       ${control.axes.map((axis, index) => {
         const outer = point(index, control.axes.length, 100, currentRadii.min, currentRadii.max);
         const handle = points[index];
         const active = state.hovered?.controlId === control.id && state.hovered?.key === axis.key;
         return `
-          <line class="axis-spoke ${active ? "is-hot" : ""}" x1="0" y1="0" x2="${outer.x.toFixed(1)}" y2="${outer.y.toFixed(1)}"></line>
+          <line class="axis-spoke ${active ? "is-hot" : ""}" data-control="${control.id}" data-key="${axis.key}" x1="0" y1="0" x2="${outer.x.toFixed(1)}" y2="${outer.y.toFixed(1)}"></line>
           <text class="axis-label" x="${(outer.x * 1.17).toFixed(1)}" y="${(outer.y * 1.17).toFixed(1)}" text-anchor="${outer.x < -8 ? "end" : outer.x > 8 ? "start" : "middle"}">${axis.label}</text>
           <g class="axis-handle ${active ? "is-hot" : ""}" tabindex="0" role="slider"
-            aria-label="${axis.label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${values[axis.key]}"
+            aria-label="${axis.label}: ${values[axis.key]} points. ${axis.desc}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${values[axis.key]}"
             data-control="${control.id}" data-key="${axis.key}">
             <title>${axis.desc}</title>
             <line class="value-spoke" style="--axis-color:${axis.color}" x1="0" y1="0" x2="${handle.x.toFixed(1)}" y2="${handle.y.toFixed(1)}"></line>
-            <circle class="handle-hit" cx="${handle.x.toFixed(1)}" cy="${handle.y.toFixed(1)}" r="22"></circle>
+            <circle class="handle-hit" cx="${handle.x.toFixed(1)}" cy="${handle.y.toFixed(1)}" r="24"></circle>
             ${renderHandleMark(control, axis, handle.x, handle.y, values[axis.key])}
-            ${values[axis.key] > 0 ? `<text class="handle-value" x="${handle.x.toFixed(1)}" y="${(handle.y + 28).toFixed(1)}" text-anchor="middle">${values[axis.key]}</text>` : ""}
+            ${values[axis.key] > 0 ? `<text class="handle-value" x="${handle.x.toFixed(1)}" y="${(handle.y + 25).toFixed(1)}" text-anchor="middle">${values[axis.key]}</text>` : ""}
           </g>
         `;
       }).join("")}
-      ${sum(control.id) === 0 ? `<circle class="center-pin" cx="0" cy="0" r="5"></circle>` : ""}
-      ${sum(control.id) === 0 ? `<text class="center-hint" x="0" y="24" text-anchor="middle">drag outward</text>` : ""}
+      <g class="center-meter" aria-hidden="true">
+        <circle cx="0" cy="0" r="23"></circle>
+        <text class="center-total" x="0" y="-1" text-anchor="middle">${total}</text>
+        <text class="center-unit" x="0" y="11" text-anchor="middle">/ 100</text>
+      </g>
+      ${total === 0 ? `<text class="center-hint" x="0" y="49" text-anchor="middle">drag a mark</text>` : ""}
     </svg>
   `;
 }
 
-function renderHandleMark(control, axis, x, y, value) {
-  const maxSize = control.grammar === "shape" ? 58 : control.grammar === "color" ? 46 : 34;
-  const growth = control.grammar === "shape" ? 0.46 : control.grammar === "color" ? 0.32 : 0.2;
-  const size = clamp(12 + value * growth, 12, maxSize);
+function renderHandleMark(control, axis, x, y) {
+  const size = control.grammar === "shape" ? 26 : control.grammar === "color" ? 22 : 30;
   if (control.grammar === "color") {
     return `<circle class="handle-shape handle-color" style="--axis-color:${axis.color}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size / 2).toFixed(1)}"></circle>`;
   }
@@ -565,10 +590,13 @@ function renderActiveStack(control) {
     <div class="active-stack option-stack" data-empty="${active.every((axis) => axis.value === 0)}">
       ${active.map((axis) => `
         <button class="axis-row" type="button" data-action="nudge" data-control="${control.id}" data-key="${axis.key}"
-          data-hover-control="${control.id}" data-hover-key="${axis.key}" data-active="${axis.value > 0}" style="--axis-color:${axis.color}; --axis-value:${axis.value}%">
+          data-hover-control="${control.id}" data-hover-key="${axis.key}" data-active="${axis.value > 0}" style="--axis-color:${axis.color}; --axis-value:${axis.value}%"
+          title="${escapeAttr(axis.desc)} Activate to add 5 points."
+          aria-label="${axis.label}, ${axis.value} points. Activate to add 5 points.">
           ${renderAxisToken(control, axis)}
           <span class="axis-copy">
             <strong>${axis.label}</strong>
+            <small>${axis.desc}</small>
           </span>
           <span class="axis-bar" aria-hidden="true"><span></span></span>
           <span class="axis-number">${axis.value}</span>
@@ -661,15 +689,6 @@ function renderMarkPattern(interaction, size) {
   }).join("");
 }
 
-function renderMeshLines(radius, step) {
-  const lines = [];
-  for (let value = -radius; value <= radius; value += step) {
-    lines.push(`<line x1="${(-radius).toFixed(1)}" y1="${value.toFixed(1)}" x2="${radius.toFixed(1)}" y2="${value.toFixed(1)}"></line>`);
-    lines.push(`<line x1="${value.toFixed(1)}" y1="${(-radius).toFixed(1)}" x2="${value.toFixed(1)}" y2="${radius.toFixed(1)}"></line>`);
-  }
-  return lines.join("");
-}
-
 function renderPathTrail(snap) {
   return `
     <div class="path-trail" aria-label="Text path trail">
@@ -741,10 +760,11 @@ function clearHover() {
 
 function renderHoverOnly() {
   const insight = app.querySelector(".hover-insight");
-  if (!insight) return;
-  const next = document.createElement("div");
-  next.innerHTML = renderHoverInsight();
-  insight.replaceWith(next.firstElementChild);
+  if (insight) {
+    const next = document.createElement("div");
+    next.innerHTML = renderHoverInsight();
+    insight.replaceWith(next.firstElementChild);
+  }
   app.querySelectorAll(".axis-row, .axis-handle, .axis-spoke").forEach((item) => item.classList.remove("is-hot"));
   if (state.hovered) {
     app.querySelectorAll(`[data-control="${state.hovered.controlId}"][data-key="${state.hovered.key}"], [data-hover-control="${state.hovered.controlId}"][data-hover-key="${state.hovered.key}"]`).forEach((item) => item.classList.add("is-hot"));
@@ -763,13 +783,22 @@ function onHandleKey(event) {
   const controlId = event.currentTarget.dataset.control;
   const key = event.currentTarget.dataset.key;
   const step = event.shiftKey ? 10 : 5;
+  const restoreFocus = `.axis-handle[data-control="${controlId}"][data-key="${key}"]`;
   if (event.key === "ArrowUp" || event.key === "ArrowRight") {
     event.preventDefault();
-    setAxisValue(controlId, key, state.values[controlId][key] + step);
+    setAxisValue(controlId, key, state.values[controlId][key] + step, { immediate: true, restoreFocus });
   }
   if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
     event.preventDefault();
-    setAxisValue(controlId, key, state.values[controlId][key] - step);
+    setAxisValue(controlId, key, state.values[controlId][key] - step, { immediate: true, restoreFocus });
+  }
+  if (event.key === "Home") {
+    event.preventDefault();
+    setAxisValue(controlId, key, 0, { immediate: true, restoreFocus });
+  }
+  if (event.key === "End") {
+    event.preventDefault();
+    setAxisValue(controlId, key, 100, { immediate: true, restoreFocus });
   }
 }
 
@@ -779,6 +808,10 @@ window.addEventListener("pointermove", (event) => {
 });
 
 window.addEventListener("pointerup", () => {
+  state.active = null;
+});
+
+window.addEventListener("pointercancel", () => {
   state.active = null;
 });
 
@@ -805,14 +838,37 @@ function onAction(event) {
     return;
   }
   if (action === "reveal" && isComplete()) {
-    state.revealed = true;
+    if (!state.revealed) {
+      state.revealed = true;
+      render();
+    }
+    requestAnimationFrame(() => {
+      app.querySelector("#profile-output")?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+    return;
+  }
+  if (action === "set-path") {
+    state.pathMode = event.currentTarget.dataset.value;
     render();
+    restoreFocus(`.segment[data-action="set-path"][data-value="${state.pathMode}"]`);
+    return;
+  }
+  if (action === "set-visibility") {
+    state.visibility = event.currentTarget.dataset.value;
+    render();
+    restoreFocus(`.segment[data-action="set-visibility"][data-value="${state.visibility}"]`);
     return;
   }
   if (action === "nudge") {
     const controlId = event.currentTarget.dataset.control;
     const key = event.currentTarget.dataset.key;
-    setAxisValue(controlId, key, state.values[controlId][key] + 10, { immediate: true });
+    setAxisValue(controlId, key, state.values[controlId][key] + 5, {
+      immediate: true,
+      restoreFocus: `.axis-row[data-control="${controlId}"][data-key="${key}"]`,
+    });
     return;
   }
   if (action === "copy") copyText(JSON.stringify(snapshot(), null, 2), "JSON copied.");
@@ -852,7 +908,7 @@ async function copyText(text, message) {
 
 function buildMarkdown(snap) {
   return `---
-record_id: ${snap.person}-${today}-onboarding-v1
+record_id: ${snap.person}-${today}-radial-profile
 record_type: preference_snapshot
 person: ${snap.person}
 schema_version: ${snap.schema_version}
@@ -873,7 +929,7 @@ semantic_mark:
   line: ${yamlScalar(snap.semantic_mark.line)}
 ---
 
-# ${snap.person} onboarding v1 semantic mark
+# ${snap.person} preference profile
 
 ${snap.routing_sentence}
 `;
@@ -911,6 +967,7 @@ function escapeAttr(value) {
 function icon(name) {
   const paths = {
     "rotate-ccw": `<path d="M3 2v6h6"/><path d="M3 8a9 9 0 1 0 3-5.7"/>`,
+    balance: `<path d="M4 7h16M7 12h10M10 17h4"/><circle cx="4" cy="7" r="1.5"/><circle cx="17" cy="12" r="1.5"/><circle cx="10" cy="17" r="1.5"/>`,
     copy: `<rect x="9" y="9" width="13" height="13" rx="2"/><rect x="2" y="2" width="13" height="13" rx="2"/>`,
     spark: `<path d="M12 2l1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7L12 2Z"/>`,
     eye: `<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/>`,

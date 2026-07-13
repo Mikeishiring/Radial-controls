@@ -34,4 +34,4 @@ fs.writeFileSync(
   ].join("\n"),
 );
 
-console.log(`Built public Onboarding V1 radial-controls demo in ${dist}`);
+console.log(`Built public Radial Controls demo in ${dist}`);

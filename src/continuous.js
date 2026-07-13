@@ -105,7 +105,7 @@ const STAGES = [
   },
 ];
 
-const COLORS = ["#d84b28", "#d6a84c", "#56b88d", "#5b9dce", "#9a80c7", "#c95f7f"];
+const COLORS = Array(6).fill("#50c99a");
 
 const SHAPE_PULLS = {
   product: { r: 1.05, twist: -0.04, x: -0.1, y: -0.18 },
@@ -453,6 +453,21 @@ function startGesture(event) {
   queueRender();
 }
 
+function startKeyboardGesture() {
+  unbindGlobalGesture();
+  state.phase = "drawing";
+  state.stageIndex = 0;
+  state.pointer = null;
+  state.root = rootPoint();
+  state.active = { ...state.root };
+  state.trail = [{ ...state.root, stage: "start", label: "Start" }];
+  state.commits = [];
+  state.hotOption = null;
+  state.armed = true;
+  queueRender();
+  focusAfterRender("[data-option]");
+}
+
 function nearestCommitOption(point) {
   if (!state.active || state.stageIndex >= STAGES.length) return null;
   const options = optionPositions();
@@ -567,6 +582,7 @@ function selectByClick(optionKey) {
   commitOption(option);
   if (state.stageIndex < STAGES.length) state.phase = "idle";
   queueRender();
+  focusAfterRender(state.stageIndex < STAGES.length ? "[data-option]" : ".mini-reset");
 }
 
 function polylinePath(points) {
@@ -685,12 +701,12 @@ function livePath() {
 }
 
 function currentSummary() {
-  if (state.commits.length === 0) return "Press the red root orb and drag through the first bubble.";
+  if (state.commits.length === 0) return "Press the root and drag through an option, or choose with the keyboard.";
   const last = state.commits[state.commits.length - 1];
   if (state.stageIndex >= STAGES.length) {
-    return `Shape reads ${state.commits.map((item) => item.value).slice(0, 4).join(" / ")} with ${last.value} as the closing intention.`;
+    return `Profile starts ${state.commits.map((item) => item.value).slice(0, 4).join(" / ")}; ${last.value} closes the path.`;
   }
-  return `${last.value} selected. Cross into the next bubble.`;
+  return `${last.value} selected. Continue through the next choice.`;
 }
 
 function markdownProfile() {
@@ -776,13 +792,13 @@ function renderShapePreview() {
   return `
     <section class="shape-preview" aria-label="Generated profile shape">
       <div class="shape-preview-head">
-        <p class="question-label mono">generated shape</p>
+        <p class="question-label mono">profile mark</p>
         <div class="shape-preview-actions">
           <span class="shape-read mono">${escapeHtml(stats.read)}</span>
-          <button class="mini-reset mono" data-reset type="button">reset</button>
+          <button class="mini-reset mono" data-reset type="button">clear</button>
         </div>
       </div>
-      <svg class="shape-preview-svg" viewBox="0 0 260 260" role="img" aria-label="Generated onboarding mark preview">
+      <svg class="shape-preview-svg" viewBox="0 0 260 260" role="img" aria-label="Generated preference mark from ${state.commits.length} of ${STAGES.length} choices">
         <circle class="mini-orbit" cx="130" cy="130" r="102" />
         <circle class="mini-orbit faint" cx="130" cy="130" r="54" />
         <path class="mini-guide-shape" d="${generatedGuidePath()}" />
@@ -791,9 +807,9 @@ function renderShapePreview() {
         ${points.map((point, index) => `<circle class="mini-node ${point.ghost ? "is-ghost" : "is-selected"} ${!point.ghost && index === state.commits.length - 1 ? "is-current" : ""} ${point.ghost && index === state.commits.length ? "is-next" : ""}" cx="${point.x}" cy="${point.y}" r="${!point.ghost && index === state.commits.length - 1 ? 6 : 4}" />`).join("")}
       </svg>
       <div class="shape-facts">
-        <span><b>${state.commits.length}</b> crossings</span>
-        <span><b>${stats.length}</b> path</span>
-        <span><b>${stats.turns}</b> turn</span>
+        <span><b>${state.commits.length}</b> choices</span>
+        <span><b>${stats.length}</b> path units</span>
+        <span><b>${stats.turns}</b> turn rad</span>
       </div>
     </section>
   `;
@@ -856,8 +872,11 @@ function render() {
   app.innerHTML = `
     <section class="stage-panel">
       <header class="stage-header">
-        <p class="kicker">continuous radial onboarding</p>
-        <h1 class="stage-title">Draw the profile shape.</h1>
+        <div class="stage-meta">
+          <p class="kicker">Continuous profile</p>
+          <a class="back-link" href="./">Weighted controls <span aria-hidden="true">↗</span></a>
+        </div>
+        <h1 class="stage-title">Draw your profile.</h1>
         <p class="stage-copy">${escapeHtml(currentSummary())}</p>
       </header>
       <section
@@ -866,7 +885,7 @@ function render() {
       >
         ${renderStageSvg()}
         ${state.trail.length > 0 ? `<div class="active-node" style="left:${state.active?.x ?? root.x}px;top:${state.active?.y ?? root.y}px;"></div>` : ""}
-        <button class="root-orb" data-root style="left:${root.x}px;top:${root.y}px;" type="button" aria-label="Hold and drag to begin">
+        <button class="root-orb" data-root style="left:${root.x}px;top:${root.y}px;" type="button" aria-label="Start profile. Drag through an option or tab to choose one.">
           <span class="root-mark"></span>
         </button>
         ${renderOptions()}
@@ -875,7 +894,7 @@ function render() {
       <footer class="stage-meter">
         <div>
           <div class="progress-number">${Math.round(stageProgress() * 100)}%</div>
-          <div class="progress-label mono">${complete ? "shape revealed" : `${state.commits.length}/${STAGES.length} crossings`}</div>
+          <div class="progress-label mono">${complete ? "profile complete" : `${state.commits.length}/${STAGES.length} choices`}</div>
         </div>
         <div class="crumbs">${renderCrumbs()}</div>
       </footer>
@@ -884,10 +903,10 @@ function render() {
       ${renderShapePreview()}
       <section class="side-block">
         <p class="question-label mono">${complete ? "reveal" : `step ${Math.min(state.stageIndex + 1, STAGES.length)} / ${STAGES.length}`}</p>
-        <h2 class="question-title">${complete ? "This is the onboarding mark." : escapeHtml(stage.label)}</h2>
-        <p class="question-copy">${complete ? "The jaggedness is intentional: the final mark records the route, not a normalized chart." : escapeHtml(stage.prompt)}</p>
+        <h2 class="question-title">${complete ? "Your profile mark." : escapeHtml(stage.label)}</h2>
+        <p class="question-copy">${complete ? "The path preserves your choices in order; the preview is not a normalized comparison chart." : escapeHtml(stage.prompt)}</p>
       </section>
-      <p class="agent-note">Agent context can pre-rank these bubbles from cohort data. The final bubble stays Other when the prediction misses.</p>
+      <p class="agent-note">Suggestions respond only to earlier choices. Other stays available when none fit.</p>
       <section class="side-block fields">
         <div class="field-row">
           <label for="handle">Handle</label>
@@ -898,32 +917,40 @@ function render() {
           <input id="name" data-field="name" value="${escapeHtml(state.fields.name)}" placeholder="your name" autocomplete="off" />
         </div>
         <div class="field-row">
-          <label for="github">Github</label>
+          <label for="github">GitHub</label>
           <input id="github" data-field="github" value="${escapeHtml(state.fields.github)}" placeholder="username" autocomplete="off" />
         </div>
       </section>
       <section class="side-block">
-        <p class="question-label mono">anything else</p>
-        <textarea class="context-area" data-context placeholder="Add nuance that did not fit the rings.">${escapeHtml(state.context)}</textarea>
+        <label class="question-label mono" for="profile-context">Anything else</label>
+        <textarea id="profile-context" class="context-area" data-context placeholder="Add nuance that did not fit the rings.">${escapeHtml(state.context)}</textarea>
       </section>
       <section class="side-block">
-        <p class="reveal-line">Reveal complete. The drawn path can now become the PR body.</p>
+        <p class="reveal-line">Profile complete. The path is ready to copy.</p>
         <div class="output-actions">
-          <button class="command primary" data-reset type="button">Reset shape</button>
+          <button class="command primary" data-reset type="button">Start over</button>
           <button class="command" data-copy type="button">${state.copied ? "Copied" : "Copy markdown"}</button>
         </div>
       </section>
-      <pre class="profile-preview">${escapeHtml(markdownProfile())}</pre>
+      <pre class="profile-preview" aria-label="Profile markdown preview">${escapeHtml(markdownProfile())}</pre>
     </aside>
   `;
 
   stageEl = app.querySelector("[data-stage]");
-  app.querySelector("[data-root]").addEventListener("pointerdown", startGesture);
+  const rootControl = app.querySelector("[data-root]");
+  rootControl.addEventListener("pointerdown", startGesture);
+  rootControl.addEventListener("click", (event) => {
+    if (event.detail === 0) startKeyboardGesture();
+  });
   app.querySelectorAll("[data-option]").forEach((button) => {
     button.addEventListener("click", () => selectByClick(button.dataset.option));
   });
   app.querySelectorAll("[data-reset]").forEach((button) => {
-    button.addEventListener("click", resetShape);
+    button.addEventListener("click", () => {
+      resetShape();
+      queueRender();
+      focusAfterRender("[data-root]");
+    });
   });
   app.querySelector("[data-copy]").addEventListener("click", copyMarkdown);
   app.querySelectorAll("[data-field]").forEach((input) => {
@@ -944,6 +971,14 @@ function queueRender() {
   requestAnimationFrame(() => {
     renderQueued = false;
     render();
+  });
+}
+
+function focusAfterRender(selector) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      app.querySelector(selector)?.focus({ preventScroll: true });
+    });
   });
 }
 

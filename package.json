@@ -2,12 +2,12 @@
   "name": "radial-controls",
   "version": "0.1.0",
   "private": true,
-  "description": "Onboarding V1 prototype built around weighted radial controls and semantic mark composition.",
+  "description": "Preference-profile onboarding built around weighted and continuous radial controls.",
   "scripts": {
     "build": "node scripts/build-public.js",
     "start": "node server.js",
     "verify": "node scripts/verify-cdp.js",
     "verify:continuous": "node scripts/verify-continuous-cdp.js",
-    "deploy": "npm run build && npx wrangler pages deploy dist --project-name radial-controls --branch main --commit-hash local-demo --commit-message \"Public Onboarding V1 radial-controls demo\" --commit-dirty=true"
+    "deploy": "npm run build && npx wrangler pages deploy dist --project-name radial-controls --branch main --commit-hash local-demo --commit-message \"Publish Radial Controls demo\" --commit-dirty=true"
   }
 }
