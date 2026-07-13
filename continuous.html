@@ -3,14 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Onboarding V1 · Continuous Radial Controls</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <meta name="description" content="Draw a preference profile through a continuous sequence of radial choices." />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>Continuous Profile · Radial Controls</title>
     <link rel="stylesheet" href="src/continuous.css" />
   </head>
   <body>
-    <main id="continuous-app" class="shape-shell" aria-live="polite"></main>
+    <main id="continuous-app" class="shape-shell"></main>
     <script type="module">
       import("./src/continuous.js").catch((error) => {
         const app = document.querySelector("#continuous-app");

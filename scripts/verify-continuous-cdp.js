@@ -86,7 +86,7 @@ async function main() {
       state.trail = [{ x: 190, y: 620, stage: "start", label: "Start" }];
       state.commits = api.STAGES.map((stage, index) => {
         const option = stage.options[index % (stage.options.length - 1)];
-        state.trail.push({ x: 330 + index * 70, y: 360 + Math.sin(index / 1.4) * 120, stage: stage.id, label: option[1], color: "#d84b28" });
+        state.trail.push({ x: 330 + index * 70, y: 360 + Math.sin(index / 1.4) * 120, stage: stage.id, label: option[1], color: "#50c99a" });
         return { stage: stage.id, label: stage.label, key: option[0], value: option[1], signal: option[2] };
       });
       api.render();
@@ -101,48 +101,86 @@ async function main() {
         clientWidth: document.documentElement.clientWidth
       };
     })()`);
-    if (!(desktop.title || "").includes("Onboarding V1") || desktop.commits < 8 || !desktop.complete || !desktop.markdown || desktop.scrollWidth > desktop.clientWidth + 1) {
+    if (!(desktop.title || "").includes("Continuous Profile") || desktop.commits < 8 || !desktop.complete || !desktop.markdown || desktop.scrollWidth > desktop.clientWidth + 1) {
       throw new Error(JSON.stringify(desktop, null, 2));
     }
     await capture(cdp, sessionId, "prototype-continuous-shape.png");
 
-    await cdp.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, sessionId);
-    await cdp.send("Page.navigate", { url: `http://localhost:${appPort}/continuous.html` }, sessionId);
-    await delay(1000);
-    const mobile = await evaluate(cdp, sessionId, `(async () => {
-      const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      for (let attempt = 0; attempt < 50 && !window.__continuousShapeDemo; attempt += 1) await wait(100);
-      const root = document.querySelector("[data-root]");
-      const api = window.__continuousShapeDemo;
-      if (!root || !api) return { hasRoot: Boolean(root), missingApi: !api };
-      const rect = root.getBoundingClientRect();
-      root.dispatchEvent(new PointerEvent("pointerdown", {
-        pointerId: 11,
-        pointerType: "mouse",
-        isPrimary: true,
-        bubbles: true,
-        cancelable: true,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
-        buttons: 1
-      }));
-      api.render();
-      await wait(120);
-      return {
-        scrollWidth: document.documentElement.scrollWidth,
-        clientWidth: document.documentElement.clientWidth,
-        hasRoot: true,
-        hasOptions: document.querySelectorAll("[data-option]").length === 6,
-        optionCount: document.querySelectorAll("[data-option]").length,
-        phase: api.state.phase,
-        active: Boolean(api.state.active)
-      };
-    })()`);
-    if (mobile.scrollWidth > mobile.clientWidth + 1 || !mobile.hasRoot || !mobile.hasOptions) {
-      throw new Error(JSON.stringify(mobile, null, 2));
+    const responsive = {};
+    for (const width of [768, 375, 320]) {
+      await cdp.send("Emulation.setDeviceMetricsOverride", {
+        width,
+        height: width <= 375 ? 844 : 900,
+        deviceScaleFactor: 1,
+        mobile: width <= 375,
+      }, sessionId);
+      await cdp.send("Page.navigate", { url: `http://localhost:${appPort}/continuous.html` }, sessionId);
+      await delay(700);
+      responsive[width] = await evaluate(cdp, sessionId, `(async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        for (let attempt = 0; attempt < 50 && !window.__continuousShapeDemo; attempt += 1) await wait(100);
+        const root = document.querySelector("[data-root]");
+        const api = window.__continuousShapeDemo;
+        if (!root || !api) return { hasRoot: Boolean(root), missingApi: !api };
+        root.dispatchEvent(new MouseEvent("click", { detail: 0, bubbles: true, cancelable: true }));
+        await wait(120);
+        const keyboardStarted = api.state.phase === "drawing" && Boolean(document.activeElement?.dataset.option);
+        api.resetShape();
+        api.render();
+        await wait(60);
+        const pointerRoot = document.querySelector("[data-root]");
+        const rect = pointerRoot.getBoundingClientRect();
+        pointerRoot.dispatchEvent(new PointerEvent("pointerdown", {
+          pointerId: 11,
+          pointerType: "mouse",
+          isPrimary: true,
+          bubbles: true,
+          cancelable: true,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+          buttons: 1
+        }));
+        api.render();
+        await wait(120);
+        const clipped = [...document.querySelectorAll('button, a, input, textarea')]
+          .filter((node) => {
+            const box = node.getBoundingClientRect();
+            return box.right > innerWidth + 1 || box.left < -1;
+          })
+          .map((node) => node.className || node.tagName)
+          .slice(0, 6);
+        return {
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+          hasRoot: true,
+          hasOptions: document.querySelectorAll("[data-option]").length === 6,
+          optionCount: document.querySelectorAll("[data-option]").length,
+          keyboardStarted,
+          phase: api.state.phase,
+          active: Boolean(api.state.active),
+          clipped
+        };
+      })()`);
+      await capture(cdp, sessionId, `prototype-continuous-shape-${width}.png`);
+      if (width === 375) await capture(cdp, sessionId, "prototype-continuous-shape-mobile.png");
     }
-    await capture(cdp, sessionId, "prototype-continuous-shape-mobile.png");
-    console.log(JSON.stringify({ desktop, mobile }, null, 2));
+
+    await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 930, deviceScaleFactor: 1, mobile: false }, sessionId);
+    await cdp.send("Emulation.setEmulatedMedia", {
+      features: [{ name: "prefers-color-scheme", value: "light" }],
+    }, sessionId);
+    await cdp.send("Page.navigate", { url: `http://localhost:${appPort}/continuous.html` }, sessionId);
+    await delay(700);
+    const light = await evaluate(cdp, sessionId, `({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+      background: getComputedStyle(document.body).backgroundColor
+    })`);
+    await capture(cdp, sessionId, "prototype-continuous-shape-light.png");
+
+    const failedResponsive = Object.values(responsive).some((value) => value.scrollWidth > value.clientWidth + 1 || !value.hasRoot || !value.hasOptions || !value.keyboardStarted || value.clipped.length > 0);
+    if (failedResponsive || light.scrollWidth > light.clientWidth + 1) throw new Error(JSON.stringify({ responsive, light }, null, 2));
+    console.log(JSON.stringify({ desktop, responsive, light }, null, 2));
   } finally {
     if (cdp) cdp.close();
     edge.kill();
